@@ -1,4 +1,4 @@
-#include "glfreetype/TextRenderer.hpp"
+#include "TextRenderer.hpp"
 
 #include <ft2build.h>
 #include <freetype/freetype.h>
@@ -6,13 +6,16 @@
 #include <freetype/ftoutln.h>
 #include <freetype/fttrigon.h>
 #include FT_FREETYPE_H
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
+#pragma comment(lib, "freetype.lib")
+
+#include <Windows.h>
 
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <vector>
+
+const int NUM_TEXTURES = 128;
 
 // All ideas here ripped from a NEHE tutorial
 // http://nehe.gamedev.net/tutorial/freetype_fonts_in_opengl/24001/
@@ -128,7 +131,7 @@ namespace glfreetype {
     void font_data::init(const char * fname, unsigned int h) {
 
         // Allocate Some Memory To Store The Texture Ids.
-        textures.resize(128);
+        textures.resize(NUM_TEXTURES);
      
         this->h=h;
      
@@ -151,16 +154,22 @@ namespace glfreetype {
         // In Terms Of 1/64ths Of Pixels.  Thus, To Make A Font
         // h Pixels High, We Need To Request A Size Of h*64.
         // (h << 6 Is Just A Prettier Way Of Writing h*64)
-        FT_Set_Char_Size( face, h << 6, h << 6, 96, 96);
+
+        HDC screen = GetDC(nullptr);
+        int dpiX = GetDeviceCaps(screen, LOGPIXELSX);
+        int dpiY = GetDeviceCaps(screen, LOGPIXELSY);
+        ReleaseDC(nullptr, screen);
+
+        FT_Set_Char_Size(face, h << 6, h << 6, dpiX, dpiY);
      
         // Here We Ask OpenGL To Allocate Resources For
         // All The Textures And Display Lists Which We
         // Are About To Create. 
-        list_base=glGenLists(128);
-        glGenTextures( 128, &textures.front() );
+        list_base=glGenLists(NUM_TEXTURES);
+        glGenTextures(NUM_TEXTURES, &textures.front() );
      
         // This Is Where We Actually Create Each Of The Fonts Display Lists.
-        for(unsigned char i=0;i<128;i++) {
+        for(unsigned char i=0;i< NUM_TEXTURES;i++) {
             make_dlist(face, i, list_base, &textures.front());
         }
      
@@ -173,8 +182,8 @@ namespace glfreetype {
     }
 
     void font_data::clean() {
-        glDeleteLists(list_base,128);
-        glDeleteTextures(128, &textures.front());
+        glDeleteLists(list_base, NUM_TEXTURES);
+        glDeleteTextures(NUM_TEXTURES, &textures.front());
     }
 
     // A Fairly Straightforward Function That Pushes
@@ -202,7 +211,7 @@ namespace glfreetype {
 
     // Much Like NeHe's glPrint Function, But Modified To Work
     // With FreeType Fonts.
-    void print(const font_data &ft_font, float x, float y, std::string const & text)  {
+    void print(const font_data &ft_font, int x, int y, std::string const & text)  {
              
         // We Want A Coordinate System Where Distance Is Measured In Window Pixels.
         pushScreenCoordinateMatrix();                                  
